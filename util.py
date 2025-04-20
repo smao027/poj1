@@ -76,8 +76,13 @@ def get_tensors(df, long=["Y1","Y2","Y3"], base=["X1","X2"], obstime = "obstime"
         ii = int(row.loc["id_new"])
         jj = int(row.loc["visit"])
 
-        x_base[ii,jj,:] = torch.tensor(row.loc[list(base)])
-        x_long[ii,jj,:] = torch.tensor(row.loc[list(long)])
+        x_base[ii, jj].copy_(
+        torch.from_numpy(row[base].to_numpy(dtype=np.float32, copy=False))
+        )
+
+        x_long[ii, jj].copy_(
+        torch.from_numpy(row[long].to_numpy(dtype=np.float32, copy=False))
+        )
         mask[ii,jj] = 1
         obs_time[ii,jj] = row.loc[obstime]
    

@@ -6,7 +6,6 @@ import torch.nn.functional as F
 from wheel import positional_encoding, MultiHeadAttention
 
 from MoE import MMoEHead
-
 class Decoder_Layer(nn.Module):
     """
     Decoder Block
@@ -100,17 +99,14 @@ class Decoder(nn.Module):
                                              for _ in range(num_decoder_layers)])
         
     def forward(self, long, base, mask, obs_time):
-        # Concatenate longitudinal and baseline data
-        x = torch.cat((long, base), dim=2)
-        
-        # Linear Embedding
+        # ConcatenateMMoEHeaddding
         x = self.embedding(x)
         
         # Positional Embedding
 
         x = x + positional_encoding(
             x.shape[0], x.shape[1], x.shape[2], obs_time)
-        
+
         # Decoder Layers
         for layer in self.decoder_layers:
             decoding = layer(x, x, mask)
@@ -120,7 +116,7 @@ class Decoder(nn.Module):
 
 class Decoder_p(nn.Module):
     """
-    Decoder Block
+    Decoder BlockTransformer1
     
     Parameters_
     ----------
@@ -210,7 +206,7 @@ class Transformer1(nn.Module):
     def forward(self, long, base, mask, obs_time, pred_time, use_moe = True):        
         # Decoder Layers
         x = self.decoder(long, base, mask, obs_time)
-        
+        print(x.shape)
         # Decoder Layer with prediction time embedding
         
         x = self.decoder_pred(x, x, mask, pred_time)
