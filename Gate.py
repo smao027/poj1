@@ -331,7 +331,6 @@ class Decoder_MMOE_Layer(nn.Module):
         self.dropout_attn = nn.Dropout(0.1)
         self.Attention = MultiHeadAttention(d_model, nhead)
         self.norm1 = nn.LayerNorm(d_model)
-        # MMoE experts: each expert is a small feedforward network (d_model -> d_model)
         self.experts = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(d_model, d_ff_expert),
@@ -339,32 +338,31 @@ class Decoder_MMOE_Layer(nn.Module):
                 nn.Linear(d_ff_expert, d_model)
             ) for _ in range(num_experts)
         ])
-        # Task-specific gating networks (each outputs a distribution over experts)
+
         self.gate_long = nn.Linear(d_model, num_experts)
         self.gate_surv = nn.Linear(d_model, num_experts)
-        # Output heads for each task
+
         self.longitudinal_head = nn.Linear(d_model, d_long)
         self.survival_head = nn.Linear(d_model, 1)
     
     def forward(self, q, kv, mask=None):
         
-        # 1. Multi-head attention (with optional masking)
+
         attn_output = self.Attention(query=q, key=kv, value=kv, mask = mask)
-        # Add & Norm: residual connection and layer normalization
+
         x = self.norm1(q + self.dropout_attn(attn_output))
-        # 2. Mixture-of-Experts (MMoE) feedforward sublayer
-        # Compute outputs of all experts (shared expert pool)
+
         expert_outputs = [expert(x) for expert in self.experts]    # list of [B, T, d_model] for each expert
         expert_outputs = torch.stack(expert_outputs, dim=2)        # shape [B, T, num_experts, d_model]
-        # Compute gating weights for each task (softmax over experts)
+
         gate_long = F.softmax(self.gate_long(x), dim=-1)           # [B, T, num_experts]
         gate_surv = F.softmax(self.gate_surv(x), dim=-1)           # [B, T, num_experts]
-        # Combine expert outputs using task-specific gating weights
+
         gate_long = gate_long.unsqueeze(-1)                        # [B, T, num_experts, 1]
         gate_surv = gate_surv.unsqueeze(-1)                        # [B, T, num_experts, 1]
         combined_long = torch.sum(expert_outputs * gate_long, dim=2)  # [B, T, d_model]
         combined_surv = torch.sum(expert_outputs * gate_surv, dim=2)  # [B, T, d_model]
-        # 3. Task-specific output projections (heads)
+
         long_out = self.longitudinal_head(combined_long)           # [B, T, d_long]
         surv_logit = self.survival_head(combined_surv)
         surv_out = torch.sigmoid(surv_logit)                # [B, T, 1]
