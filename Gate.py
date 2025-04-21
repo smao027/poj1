@@ -410,8 +410,10 @@ class Decoder_MMOE_Layer2(nn.Module):
         )
         return weights
 
-    def forward(self, q, kv, mask=None):
-        # Self-attention block
+    def forward(self, q, kv, mask=None, pred_time):
+
+        q = q+positional_encoding(
+            q.shape[0], q.shape[1], q.shape[2], pred_time)
         attn_output = self.Attention(query=q, key=kv, value=kv, mask=mask)
         x = self.norm1(q + self.dropout_attn(attn_output))
 
@@ -474,8 +476,7 @@ class Transformer3(nn.Module):
         x = self.decoder(long, base, mask, obs_time)
         
         # Decoder Layer with prediction time embedding
-        x = x+positional_encoding(
-            x.shape[0], x.shape[1], x.shape[2], pred_time)
-        long,surv = self.mmoe_layer(x,x, mask)
+
+        long,surv = self.mmoe_layer(x,x, mask, pred_time)
 
         return long, surv
