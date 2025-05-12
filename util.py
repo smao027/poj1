@@ -3,6 +3,112 @@ import torch.nn as nn
 import numpy as np
 
 
+class Encoder_Layer(nn.Module):
+    """
+    Encoder Block
+    
+    Parameters
+    ----------
+    d_model:
+        Dimension of the input vector
+    nhead:
+        Number of heads
+    dropout:
+        The dropout value
+    """
+    
+    def __init__(self,
+                 d_model,
+                 nhead,
+                 dropout,
+                 ffn_dim=64):
+        super().__init__()
+        
+        self.dropout = nn.Dropout(dropout)
+        
+        self.Attention = MultiHeadAttention(d_model, nhead)
+                
+        self.feedForward = nn.Sequential(
+            nn.Linear(d_model,ffn_dim),
+            nn.ReLU(),
+            nn.Linear(ffn_dim,d_model),
+            nn.Dropout(dropout)
+            )
+        
+        self.layerNorm1 = nn.LayerNorm(d_model)
+        self.layerNorm2 = nn.LayerNorm(d_model)
+        
+    def forward(self, q, kv, mask):
+        
+        # Attention
+        residual = q
+        x = self.Attention(query=q, key=kv, value=kv, mask=mask)
+        x = self.dropout(x)
+        x = self.layerNorm1(x + residual)
+        
+        # Feed Forward
+        residual = x
+        x = self.feedForward(x)
+        x = self.layerNorm2(x + residual)
+        
+        return x
+    
+
+class Decoder_Layer(nn.Module):
+    """
+    Decoder Block
+    
+    Parameters
+    ----------
+    d_model:
+        Dimension of the input vector
+    nhead:
+        Number of heads
+    dropout:
+        The dropout value
+    """
+    
+    def __init__(self,
+                 d_model,
+                 nhead,
+                 dropout,
+                 ffn_dim=64):
+        super().__init__()
+        
+        self.dropout = nn.Dropout(dropout)
+        
+        self.Attention = MultiHeadAttention(d_model, nhead)
+                
+        self.feedForward = nn.Sequential(
+            nn.Linear(d_model,ffn_dim),
+            nn.ReLU(),
+            nn.Linear(ffn_dim,d_model),
+            nn.Dropout(dropout)
+            )
+        
+        self.layerNorm1 = nn.LayerNorm(d_model)
+        self.layerNorm2 = nn.LayerNorm(d_model)
+        self.layerNorm3 = nn.LayerNorm(d_model)
+    def forward(self, m,src_mask,q,trg_mask):
+        # self-attention
+        residual = q
+        x = self.Attention(query=q, key=q, value=q, mask=trg_mask)
+        x = self.dropout(x)
+        x = self.layerNorm1(x + residual)
+        
+        #cross-attention
+        residual = x
+        x = self.Attention(query=x, key=m, value=m, mask=src_mask)
+        x = self.dropout(x)
+        x = self.layerNorm2(x + residual)
+
+        # Feed Forward
+        residual = x
+        x = self.feedForward(x)
+        x = self.layerNorm3(x + residual)
+        
+        return x
+        
 def long_loss(yhat, y, mask):
     mask = mask.repeat((1,1,y.shape[2]))
     loss_func = nn.MSELoss(reduction='none')
@@ -40,6 +146,27 @@ def surv_loss(surv_pred, mask, event):
     #nll_loss = nll_loss.mean()
     
     return -nll_loss
+
+def surv_loss_lsr(inten,batch):
+
+    death_mask = batch["intenmask"]
+    idx = torch.argmax(death_mask.int()).item()  # returns 0 if all False
+    surv_mask = torch.zeros_like(death_mask)
+    if death_mask.any():
+        surv_mask[:idx] = True
+    batch_mask = batch["mask"]
+    #contribution from possibly the last survival event
+    event_ll = (torch.log(1-inten)*death_mask[:,1:]).sum(dim=-1)
+    #contribution from the intervals 
+    #think again about the simple case [visit,visit,e,pad] (full mask: [1,1,1,0])
+    #the desired mask is [1,1,0]
+    non_event_ll = ((torch.log(inten)) * surv_mask[:,1:]).sum(dim=-1)
+    full_loss = event_ll + non_event_ll
+    # normalize by batch size
+    ll_loss_full = -torch.sum(full_loss)
+    ll_loss = ll_loss_full/batch_mask.sum().item()
+    return ll_loss,ll_loss_full
+
 
 def get_tensors(df, long=["Y1","Y2","Y3"], base=["X1","X2"], obstime = "obstime"):
     '''

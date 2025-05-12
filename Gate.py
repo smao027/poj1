@@ -310,9 +310,7 @@ class Transformer2(nn.Module):
         x = self.decoder(long, base, mask, obs_time)
         
         # Decoder Layer with prediction time embedding
-        x = x+positional_encoding(
-            x.shape[0], x.shape[1], x.shape[2], pred_time)
-        long,surv = self.mmoe_layer(x,x, mask)
+        long,surv = self.mmoe_layer(x,x, mask,pred_time)
 
         return long, surv
     
@@ -346,8 +344,9 @@ class Decoder_MMOE_Layer(nn.Module):
         self.longitudinal_head = nn.Linear(d_model, d_long)
         self.survival_head = nn.Linear(d_model, 1)
     
-    def forward(self, q, kv, mask=None):
-        
+    def forward(self, q, kv, mask, pred_time):
+        q = q+positional_encoding(
+            q.shape[0], q.shape[1], q.shape[2], pred_time)
 
         attn_output = self.Attention(query=q, key=kv, value=kv, mask = mask)
 
@@ -410,7 +409,7 @@ class Decoder_MMOE_Layer2(nn.Module):
         )
         return weights
 
-    def forward(self, q, kv, mask=None, pred_time):
+    def forward(self, q, kv, mask, pred_time):
 
         q = q+positional_encoding(
             q.shape[0], q.shape[1], q.shape[2], pred_time)
