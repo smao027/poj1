@@ -1,4 +1,4 @@
-from data_simulation_JM import simulate_JM_base
+from Simulations.data_simulation_JM import simulate_JM_base
 n_sim = 1
 I = 1000
 obstime = [0,1,2,3,4,5,6,7,8,9,10]

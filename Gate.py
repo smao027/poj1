@@ -3,7 +3,7 @@ import torch.nn as nn
 
 import torch.nn.functional as F
 
-from wheel import positional_encoding, MultiHeadAttention
+from Functions.wheel import positional_encoding, MultiHeadAttention
 
 from MoE import MMoEHead
 class Decoder_Layer(nn.Module):

@@ -3,8 +3,8 @@ import torch
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from util import (get_tensors, get_mask, init_weights, get_std_opt)
-from util import (long_loss, surv_loss)
+from Functions.util import (get_tensors, get_mask, init_weights, get_std_opt)
+from Functions.util import (long_loss, surv_loss)
 
 from Gate import Transformer2
 import numpy as np

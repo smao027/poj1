@@ -3,14 +3,14 @@ import torch
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from util import (get_tensors, get_mask, init_weights, get_std_opt)
-from util import (long_loss, surv_loss)
+from Functions.util import (get_tensors, get_mask, init_weights, get_std_opt)
+from Functions.util import (long_loss, surv_loss)
 from metrics import (AUC, Brier, MSE)
 from Gate import Transformer2
 import numpy as np
 import time
 from sklearn.preprocessing import MinMaxScaler
-from data_simulation_JM import simulate_JM_base
+from Simulations.data_simulation_JM import simulate_JM_base
 
 torch.manual_seed(0)
 def data_preprocessing(source):

@@ -5,10 +5,10 @@ print(device)
 
 
 from Gate import Transformer2
-from util import (get_tensors, get_mask, init_weights, get_std_opt)
-from util import (long_loss, surv_loss)
+from Functions.util import (get_tensors, get_mask, init_weights, get_std_opt)
+from Functions.util import (long_loss, surv_loss)
 from metrics import (AUC, Brier, MSE)
-from data_simulation_JM import simulate_JM_base
+from Simulations.data_simulation_JM import simulate_JM_base
 #from Simulation.data_simulation_nonPH import simulate_JM_nonPH
 
 import numpy as np
