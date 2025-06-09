@@ -7,7 +7,7 @@ sys.path.append('..')
 from Models.models import MATCH,ResNet
 from Functions.util import (get_tensors_MATCH, augment, format_output)
 from Functions.loss import CE_loss, long_loss
-from metrics import (AUC, Brier)
+from Functions.metrics import (AUC, Brier)
 from Simulations.data_simulation_JM import simulate_JM_base
 #from Simulation.data_simulation_nonPH import simulate_JM_nonPH
 
@@ -91,12 +91,21 @@ for i_sim in range(n_sim):
             batch_data = train_data[train_data["id"].isin(indices)]
             
             batch_long, batch_base, batch_mask, batch_e, batch_t, obs_time = get_tensors_MATCH(batch_data.copy())
-            batch_long, batch_base, batch_mask, batch_e, batch_t, subjid = augment(
+            batch_long_aug, batch_base, batch_mask, batch_e, batch_t, subjid = augment(
                 batch_long, batch_base, batch_mask, batch_e, batch_t)
             
             if len(indices)>1: #drop if last batch size is 1
-                yhat_surv, yhat_long = torch.softmax(model(batch_long, batch_base, batch_mask), dim=1)
+                yhat_surv, yhat_long = model(batch_long_aug, batch_base, batch_mask)
                 s_filter, e_filter = format_output(obs_time, batch_mask, batch_t, batch_e, out_len)
+                print("yhat_long shape:", yhat_long.shape)
+                print("batch_long shape:", batch_long.shape)
+                print("yhat_surv shape:", yhat_surv.shape)
+                print("s_filter shape:", s_filter.shape)
+                print("e_filter shape:", e_filter.shape)
+                print("obs_time shape:", obs_time.shape)
+                print("batch_mask shape:", batch_mask.shape)
+                print("batch_t shape:", batch_t.shape)
+                print("batch_e shape:", batch_e.shape)
                 loss1 = CE_loss(yhat_surv, s_filter, e_filter); loss2 = long_loss(yhat_long, batch_long, batch_mask)
                 loss = loss1 + loss2
                 loss.backward()
@@ -129,8 +138,7 @@ for i_sim in range(n_sim):
         tmp_long, tmp_base, tmp_mask, e_tmp, t_tmp, obs_time = get_tensors_MATCH(tmp_data.copy())
         
         model = model.eval()
-        model(tmp_long, tmp_base, tmp_mask)
-        surv_pred = torch.softmax(, dim=1)
+        surv_pred, long_out = model(tmp_long, tmp_base, tmp_mask)
         surv_pred = surv_pred.detach().numpy()
         surv_pred = surv_pred[:,::-1].cumsum(axis=1)[:,::-1]
         surv_pred = surv_pred[:,1:(out_len+1)]

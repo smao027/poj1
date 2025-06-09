@@ -113,7 +113,7 @@ class Decoder_Layer(nn.Module):
         
 
 
-def get_tensors_JM(df, long=["Y1","Y2","Y3"], base=["X1","X2"], obstime = "obstime"):
+def get_tensors_JM(df, d_long=3, d_base=2, obstime = "obstime"):
     '''
     Changes batch data from dataframe to corresponding tensors for Transformer model
 
@@ -139,7 +139,14 @@ def get_tensors_JM(df, long=["Y1","Y2","Y3"], base=["X1","X2"], obstime = "obsti
     
     I = len(np.unique(df.loc[:,"id"]))
     max_len = np.max(df.loc[:,"visit"]) + 1
-    
+    long = []
+    for i in range(d_long):
+        Y_str = "Y"+str(i+1)
+        long.append(Y_str)
+    base = []
+    for i in range(d_base):
+        base_str = "X"+str(i+1)
+        base.append(base_str)
     x_base = torch.zeros(I, max_len, len(base))
     x_long = torch.zeros(I, max_len, len(long))
     mask = torch.zeros((I, max_len), dtype=torch.bool)

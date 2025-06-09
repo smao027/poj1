@@ -54,10 +54,10 @@ class ResNet(nn.Module):
         return x
     
 class MATCH(nn.Module):
-    def __init__(self, n_long, n_base, out_len):
+    def __init__(self, d_long, n_base, out_len):
         super().__init__()
-        self.long1 = conv_block(n_long, 32, kernel_size=3, padding=1)
-        self.mask1 = conv_block(n_long, 8, kernel_size=3, padding=1)
+        self.long1 = conv_block(d_long, 32, kernel_size=3, padding=1)
+        self.mask1 = conv_block(d_long, 8, kernel_size=3, padding=1)
         
         self.long2 = conv_block(40, 32, kernel_size=3, padding=1)
         self.mask2 = conv_block(8, 8, kernel_size=3, padding=1)
@@ -78,6 +78,8 @@ class MATCH(nn.Module):
             nn.BatchNorm1d(64),
             nn.Linear(64,out_len)
         )
+
+        self.long = nn.Linear(32+n_base, d_long)
             
     
     def forward(self, long, base, mask):
@@ -98,8 +100,9 @@ class MATCH(nn.Module):
         x = F.adaptive_avg_pool1d(x,1).squeeze()
 
         x = torch.cat((x,base),dim=1)
-        x = self.survival(x)
-        return x
+        surv = self.survival(x)
+        surv = torch.softmax(surv, dim=1)
+        return surv
         
 
 class conv_block(nn.Module):
